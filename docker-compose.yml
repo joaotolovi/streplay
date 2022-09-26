@@ -1,6 +1,32 @@
-rapidbay:
-  ports:
-      - "5000:5000"
-  build: .
-  volumes:
+version: "3"
+
+services:
+
+  jackett:
+    image: linuxserver/jackett
+    ports:
+      - 9117:9117
+    volumes:
+      - ./.jackett:/config
+  
+  peerflix:
+    image: asapach/peerflix-server
+    ports:
+      - 9000:9000
+      - 6881:6881
+    volumes:
+      - /tmp/torrent-stream:/tmp/torrent-stream
+
+  rapidbay:
+    environment:
+      - PEERFLIX_HOST=http://peerflix:9000
+      - JACKETT_HOST=http://jackett:9117
+      - JACKETT_API_KEY=y75p520t39a3cxsuk3zq8oyosx2f09p2
+    ports:
+      - 5000:5000
+    build: .
+    volumes:
     - ./app:/app
+    links:
+      - jackett
+      - peerflix
