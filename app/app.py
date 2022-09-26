@@ -11,10 +11,11 @@ import PTN
 from functools import wraps
 
 import jackett
+import peerflix
 import settings
 import torrent
 from common import path_hierarchy
-from flask import Flask, Response, jsonify, request, send_from_directory, abort
+from flask import Flask, Response, jsonify, request, send_from_directory, abort, redirect,stream_with_context
 from rapidbaydaemon import FileStatus, RapidBayDaemon, get_filepaths
 from werkzeug.exceptions import NotFound
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -205,15 +206,25 @@ def magnet_download():
     magnet_link = request.form.get("magnet_link")
     filename = request.form.get("filename")
     magnet_hash = torrent.get_hash(magnet_link)
-    if daemon.get_file_status(magnet_hash, filename)["status"] != FileStatus.READY:
-        daemon.download_file(magnet_link, filename)
+    peerflix_start = peerflix.add_torrent(magnet_link)
+    print('peerflix_start', peerflix_start)
+    if peerflix_start:
+        infoHash = peerflix_start['infoHash']
+        while True:
+            torrent_info = peerflix.get_torrent(infoHash)
+            if "files" in torrent_info: 
+                if torrent_info ['ready'] == True:
+                    for file in torrent_info['files']:
+                        if file['name'] == filename:
+                            return jsonify(link=file["link"])
+                            
     return jsonify(magnet_hash=magnet_hash)
 
 
 @app.route("/api/magnet/<string:magnet_hash>/<string:filename>")
 @authorize
 def file_status(magnet_hash, filename):
-    return jsonify(**daemon.get_file_status(magnet_hash, filename))
+    return {"filename": filename, "status":"ready"}
 
 
 @app.route("/api/next_file/<string:magnet_hash>/<string:filename>")
@@ -247,9 +258,14 @@ def files(magnet_hash):
 
 @app.route("/play/<string:magnet_hash>/<string:filename>")
 def play(magnet_hash, filename):
-    response = send_from_directory(f"/tmp/output/{magnet_hash}", filename)
-    response.headers.add("Access-Control-Allow-Origin", "*")
-    return response
+    torrent_info = peerflix.get_torrent(magnet_hash)
+    if 'files' in torrent_info:
+        for x in torrent_info['files']:
+            print('ESTA NO TORRE')
+            if x['name'] == filename:
+                print('NOME OK')
+                response = requests.get((settings.PEERFLIX_HOST + x['link']), stream=True)
+                return Response(response)
 
 
 @app.route("/error.log")
