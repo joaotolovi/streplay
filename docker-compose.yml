@@ -21,7 +21,7 @@ services:
     environment:
       - PEERFLIX_HOST=http://peerflix:9000
       - JACKETT_HOST=http://jackett:9117
-      - JACKETT_API_KEY=y75p520t39a3cxsuk3zq8oyosx2f09p2
+      - JACKETT_API_KEY=mecjpdgrqh49wc8hdg4o80mwgnwiqhlp
     ports:
       - 5000:5000
     build: .
