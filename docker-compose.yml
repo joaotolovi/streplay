@@ -30,3 +30,13 @@ services:
     links:
       - jackett
       - peerflix
+
+  web:
+    image: nginx
+    volumes:
+    - ./templates:/etc/nginx/templates
+    ports:
+    - "8080:80"
+    environment:
+    - NGINX_HOST=34.72.28.182
+    - NGINX_PORT=80
